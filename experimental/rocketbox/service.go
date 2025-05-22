@@ -10,23 +10,23 @@ import (
 	"syscall"
 	"time"
 
-	box "github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
 	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing-box/experimental/deprecated"
+	"github.com/sagernet/sing-box/experimental/rocketbox/internal/procfs"
 	"github.com/sagernet/sing-box/experimental/rocketbox/platform"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
-	tun "github.com/sagernet/sing-tun"
+	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/logger"
 	N "github.com/sagernet/sing/common/network"
-	"github.com/sagernet/sing/common/x/list"
 	"github.com/sagernet/sing/service"
 	"github.com/sagernet/sing/service/filemanager"
 	"github.com/sagernet/sing/service/pause"
@@ -39,43 +39,8 @@ type BoxService struct {
 	instance              *box.Box
 	clashServer           adapter.ClashServer
 	pauseManager          pause.Manager
-}
 
-type deprecatedManager struct {
-	access sync.Mutex
-	notes  []deprecated.Note
-}
-
-func (m *deprecatedManager) ReportDeprecated(feature deprecated.Note) {
-	m.access.Lock()
-	defer m.access.Unlock()
-	m.notes = common.Uniq(append(m.notes, feature))
-}
-
-func (m *deprecatedManager) Get() []deprecated.Note {
-	m.access.Lock()
-	defer m.access.Unlock()
-	notes := m.notes
-	m.notes = nil
-	return notes
-}
-
-type simpleTunOptions struct {
-	mtu         int32
-	autoRoute   bool
-	strictRoute bool
-}
-
-func (o *simpleTunOptions) GetMTU() int32 {
-	return o.mtu
-}
-
-func (o *simpleTunOptions) GetAutoRoute() bool {
-	return o.autoRoute
-}
-
-func (o *simpleTunOptions) GetStrictRoute() bool {
-	return o.strictRoute
+	iOSPauseFields
 }
 
 func NewService(configContent string, platformInterface PlatformInterface) (*BoxService, error) {
@@ -188,21 +153,18 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	if len(options.IncludeAndroidUser) > 0 {
 		return nil, E.New("platform: unsupported android_user option")
 	}
-	_, err := options.BuildAutoRouteRanges(true)
+	routeRanges, err := options.BuildAutoRouteRanges(true)
 	if err != nil {
 		return nil, err
 	}
-	simpleTunOpt := &simpleTunOptions{
-		mtu:         int32(options.MTU),
-		autoRoute:   options.AutoRoute,
-		strictRoute: options.StrictRoute,
-	}
-	tunFd, err := w.iif.OpenTun(simpleTunOpt)
+	tunFd, err := w.iif.OpenTun(&tunOptions{options, routeRanges, platformOptions})
 	if err != nil {
 		return nil, err
 	}
-	// For simplicity in this example, just use a dummy name
-	options.Name = "tun"
+	options.Name, err = getTunnelName(tunFd)
+	if err != nil {
+		return nil, E.Cause(err, "query tun name")
+	}
 	dupFd, err := cb.Dup(int(tunFd))
 	if err != nil {
 		return nil, E.Cause(err, "dup tun file descriptor")
@@ -212,41 +174,8 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	return tun.New(*options)
 }
 
-// Basic implementation for DefaultInterfaceMonitor to satisfy the interface
-type simpleInterfaceMonitor struct {
-	*platformInterfaceWrapper
-	logger logger.Logger
-}
-
-func (m *simpleInterfaceMonitor) Start() error {
-	return nil
-}
-
-func (m *simpleInterfaceMonitor) Close() error {
-	return nil
-}
-
-func (m *simpleInterfaceMonitor) DefaultInterface() *control.Interface {
-	return nil
-}
-
-func (m *simpleInterfaceMonitor) OverrideAndroidVPN() bool {
-	return false
-}
-
-func (m *simpleInterfaceMonitor) AndroidVPNEnabled() bool {
-	return false
-}
-
-func (m *simpleInterfaceMonitor) RegisterCallback(callback tun.DefaultInterfaceUpdateCallback) *list.Element[tun.DefaultInterfaceUpdateCallback] {
-	return nil
-}
-
-func (m *simpleInterfaceMonitor) UnregisterCallback(element *list.Element[tun.DefaultInterfaceUpdateCallback]) {
-}
-
 func (w *platformInterfaceWrapper) CreateDefaultInterfaceMonitor(logger logger.Logger) tun.DefaultInterfaceMonitor {
-	return &simpleInterfaceMonitor{
+	return &platformDefaultInterfaceMonitor{
 		platformInterfaceWrapper: w,
 		logger:                   logger,
 	}
@@ -263,6 +192,9 @@ func (w *platformInterfaceWrapper) Interfaces() ([]adapter.NetworkInterface, err
 			continue
 		}
 		w.defaultInterfaceAccess.Lock()
+		// (GOOS=windows) SA4006: this value of `isDefault` is never used
+		// Why not used?
+		//nolint:staticcheck
 		isDefault := w.defaultInterface != nil && int(netInterface.Index) == w.defaultInterface.Index
 		w.defaultInterfaceAccess.Unlock()
 		interfaces = append(interfaces, adapter.NetworkInterface{
@@ -309,7 +241,10 @@ func (w *platformInterfaceWrapper) SystemCertificates() []string {
 func (w *platformInterfaceWrapper) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort, destination netip.AddrPort) (*process.Info, error) {
 	var uid int32
 	if w.useProcFS {
-		return nil, E.New("procfs: not found")
+		uid = procfs.ResolveSocketByProcSearch(network, source, destination)
+		if uid == -1 {
+			return nil, E.New("procfs: not found")
+		}
 	} else {
 		var ipProtocol int32
 		switch N.NetworkName(network) {

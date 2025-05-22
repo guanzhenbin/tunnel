@@ -1,14 +1,40 @@
 package rocketbox
 
 import (
+	"bytes"
 	"context"
+	"net/netip"
+	"os"
 
-	box "github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box/adapter"
+	"github.com/sagernet/sing-box/common/process"
+	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/dns"
+	"github.com/sagernet/sing-box/experimental/rocketbox/platform"
 	"github.com/sagernet/sing-box/include"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	"github.com/sagernet/sing-tun"
+	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/json"
+	"github.com/sagernet/sing/common/logger"
+	"github.com/sagernet/sing/common/x/list"
+	"github.com/sagernet/sing/service"
 )
+
+func BaseContext(platformInterface PlatformInterface) context.Context {
+	dnsRegistry := include.DNSTransportRegistry()
+	if platformInterface != nil {
+		if localTransport := platformInterface.LocalDNSTransport(); localTransport != nil {
+			dns.RegisterTransport[option.LocalDNSServerOptions](dnsRegistry, C.DNSTypeLocal, func(ctx context.Context, logger log.ContextLogger, tag string, options option.LocalDNSServerOptions) (adapter.DNSTransport, error) {
+				return newPlatformTransport(localTransport, tag, options), nil
+			})
+		}
+	}
+	return box.Context(context.Background(), include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry(), dnsRegistry)
+}
 
 func parseConfig(ctx context.Context, configContent string) (option.Options, error) {
 	options, err := json.UnmarshalExtendedContext[option.Options](ctx, []byte(configContent))
@@ -18,74 +44,122 @@ func parseConfig(ctx context.Context, configContent string) (option.Options, err
 	return options, nil
 }
 
-func BaseContext(platformInterface PlatformInterface) context.Context {
-	return box.Context(
-		context.Background(),
-		include.InboundRegistry(),
-		include.OutboundRegistry(),
-		include.EndpointRegistry(),
-		include.DNSTransportRegistry(),
-	)
+func CheckConfig(configContent string) error {
+	ctx := BaseContext(nil)
+	options, err := parseConfig(ctx, configContent)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	ctx = service.ContextWith[platform.Interface](ctx, (*platformInterfaceStub)(nil))
+	instance, err := box.New(box.Options{
+		Context: ctx,
+		Options: options,
+	})
+	if err == nil {
+		instance.Close()
+	}
+	return err
 }
 
-type PlatformInterface interface {
-	WriteLog(message string)
-	UsePlatformAutoDetectInterfaceControl() bool
-	AutoDetectInterfaceControl(fd int32) error
-	OpenTun(options TunOptions) (int32, error)
-	UseProcFS() bool
-	FindConnectionOwner(ipProtocol int32, sourceAddress string, sourcePort int32, destinationAddress string, destinationPort int32) (int32, error)
-	PackageNameByUid(uid int32) (string, error)
-	UIDByPackageName(packageName string) (int32, error)
-	StartDefaultInterfaceMonitor(listener InterfaceUpdateListener) error
-	CloseDefaultInterfaceMonitor(listener InterfaceUpdateListener) error
-	GetInterfaces() (NetworkInterfaceIterator, error)
-	UnderNetworkExtension() bool
-	IncludeAllNetworks() bool
-	ReadWIFIState() *WIFIState
-	SystemCertificates() StringIterator
-	ClearDNSCache()
-	SendNotification(notification *Notification) error
+type platformInterfaceStub struct{}
+
+func (s *platformInterfaceStub) Initialize(networkManager adapter.NetworkManager) error {
+	return nil
 }
 
-type TunOptions interface {
-	GetMTU() int32
-	GetAutoRoute() bool
-	GetStrictRoute() bool
+func (s *platformInterfaceStub) UsePlatformAutoDetectInterfaceControl() bool {
+	return true
 }
 
-type InterfaceUpdateListener interface {
-	UpdateDefaultInterface(interfaceName string, interfaceIndex int32, isExpensive bool, isConstrained bool)
+func (s *platformInterfaceStub) AutoDetectInterfaceControl(fd int) error {
+	return nil
 }
 
-type WIFIState struct {
-	SSID  string
-	BSSID string
+func (s *platformInterfaceStub) OpenTun(options *tun.Options, platformOptions option.TunPlatformOptions) (tun.Tun, error) {
+	return nil, os.ErrInvalid
 }
 
-type NetworkInterfaceIterator interface {
-	Next() *NetworkInterface
-	HasNext() bool
+func (s *platformInterfaceStub) UsePlatformDefaultInterfaceMonitor() bool {
+	return true
 }
 
-type NetworkInterface struct {
-	Index     int32
-	MTU       int32
-	Name      string
-	Addresses StringIterator
-	Flags     int32
-
-	Type      int32
-	DNSServer StringIterator
-	Metered   bool
+func (s *platformInterfaceStub) CreateDefaultInterfaceMonitor(logger logger.Logger) tun.DefaultInterfaceMonitor {
+	return (*interfaceMonitorStub)(nil)
 }
 
-type Notification struct {
-	Identifier string
-	TypeName   string
-	TypeID     int32
-	Title      string
-	Subtitle   string
-	Body       string
-	OpenURL    string
+func (s *platformInterfaceStub) Interfaces() ([]adapter.NetworkInterface, error) {
+	return nil, os.ErrInvalid
+}
+
+func (s *platformInterfaceStub) UnderNetworkExtension() bool {
+	return false
+}
+
+func (s *platformInterfaceStub) IncludeAllNetworks() bool {
+	return false
+}
+
+func (s *platformInterfaceStub) ClearDNSCache() {
+}
+
+func (s *platformInterfaceStub) ReadWIFIState() adapter.WIFIState {
+	return adapter.WIFIState{}
+}
+
+func (s *platformInterfaceStub) SystemCertificates() []string {
+	return nil
+}
+
+func (s *platformInterfaceStub) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort, destination netip.AddrPort) (*process.Info, error) {
+	return nil, os.ErrInvalid
+}
+
+type interfaceMonitorStub struct{}
+
+func (s *interfaceMonitorStub) Start() error {
+	return os.ErrInvalid
+}
+
+func (s *interfaceMonitorStub) Close() error {
+	return os.ErrInvalid
+}
+
+func (s *interfaceMonitorStub) DefaultInterface() *control.Interface {
+	return nil
+}
+
+func (s *interfaceMonitorStub) OverrideAndroidVPN() bool {
+	return false
+}
+
+func (s *interfaceMonitorStub) AndroidVPNEnabled() bool {
+	return false
+}
+
+func (s *interfaceMonitorStub) RegisterCallback(callback tun.DefaultInterfaceUpdateCallback) *list.Element[tun.DefaultInterfaceUpdateCallback] {
+	return nil
+}
+
+func (s *interfaceMonitorStub) UnregisterCallback(element *list.Element[tun.DefaultInterfaceUpdateCallback]) {
+}
+
+func (s *platformInterfaceStub) SendNotification(notification *platform.Notification) error {
+	return nil
+}
+
+func FormatConfig(configContent string) (*StringBox, error) {
+	options, err := parseConfig(BaseContext(nil), configContent)
+	if err != nil {
+		return nil, err
+	}
+	var buffer bytes.Buffer
+	encoder := json.NewEncoder(&buffer)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(options)
+	if err != nil {
+		return nil, err
+	}
+	return wrapString(buffer.String()), nil
 }
