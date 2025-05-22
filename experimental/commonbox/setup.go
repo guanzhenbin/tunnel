@@ -1,4 +1,4 @@
-package libbox
+package commonbox
 
 import (
 	"os"
@@ -14,13 +14,13 @@ import (
 )
 
 var (
-	sBasePath        string
-	sWorkingPath     string
-	sTempPath        string
-	sUserID          int
-	sGroupID         int
-	sTVOS            bool
-	sFixAndroidStack bool
+	SBasePath        string
+	SWorkingPath     string
+	STempPath        string
+	SUserID          int
+	SGroupID         int
+	STVOS            bool
+	SFixAndroidStack bool
 )
 
 func init() {
@@ -37,31 +37,31 @@ type SetupOptions struct {
 }
 
 func Setup(options *SetupOptions) error {
-	sBasePath = options.BasePath
-	sWorkingPath = options.WorkingPath
-	sTempPath = options.TempPath
+	SBasePath = options.BasePath
+	SWorkingPath = options.WorkingPath
+	STempPath = options.TempPath
 	if options.Username != "" {
 		sUser, err := user.Lookup(options.Username)
 		if err != nil {
 			return err
 		}
-		sUserID, _ = strconv.Atoi(sUser.Uid)
-		sGroupID, _ = strconv.Atoi(sUser.Gid)
+		SUserID, _ = strconv.Atoi(sUser.Uid)
+		SGroupID, _ = strconv.Atoi(sUser.Gid)
 	} else {
-		sUserID = os.Getuid()
-		sGroupID = os.Getgid()
+		SUserID = os.Getuid()
+		SGroupID = os.Getgid()
 	}
-	sTVOS = options.IsTVOS
+	STVOS = options.IsTVOS
 
 	// TODO: remove after fixed
 	// https://github.com/golang/go/issues/68760
-	sFixAndroidStack = options.FixAndroidStack
+	SFixAndroidStack = options.FixAndroidStack
 
-	os.MkdirAll(sWorkingPath, 0o777)
-	os.MkdirAll(sTempPath, 0o777)
+	os.MkdirAll(SWorkingPath, 0o777)
+	os.MkdirAll(STempPath, 0o777)
 	if options.Username != "" {
-		os.Chown(sWorkingPath, sUserID, sGroupID)
-		os.Chown(sTempPath, sUserID, sGroupID)
+		os.Chown(SWorkingPath, SUserID, SGroupID)
+		os.Chown(STempPath, SUserID, SGroupID)
 	}
 	return nil
 }

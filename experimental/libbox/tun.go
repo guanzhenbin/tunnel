@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/netip"
 
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common"
@@ -65,7 +66,7 @@ type RoutePrefixIterator interface {
 }
 
 func mapRoutePrefix(prefixes []netip.Prefix) RoutePrefixIterator {
-	return newIterator(common.Map(prefixes, func(prefix netip.Prefix) *RoutePrefix {
+	return cb.NewIterator(common.Map(prefixes, func(prefix netip.Prefix) *RoutePrefix {
 		return &RoutePrefix{
 			address: prefix.Addr(),
 			prefix:  prefix.Bits(),
@@ -137,11 +138,11 @@ func (o *tunOptions) GetInet6RouteRange() RoutePrefixIterator {
 }
 
 func (o *tunOptions) GetIncludePackage() StringIterator {
-	return newIterator(o.IncludePackage)
+	return cb.NewIterator(o.IncludePackage)
 }
 
 func (o *tunOptions) GetExcludePackage() StringIterator {
-	return newIterator(o.ExcludePackage)
+	return cb.NewIterator(o.ExcludePackage)
 }
 
 func (o *tunOptions) IsHTTPProxyEnabled() bool {
@@ -160,9 +161,9 @@ func (o *tunOptions) GetHTTPProxyServerPort() int32 {
 }
 
 func (o *tunOptions) GetHTTPProxyBypassDomain() StringIterator {
-	return newIterator(o.TunPlatformOptions.HTTPProxy.BypassDomain)
+	return cb.NewIterator(o.TunPlatformOptions.HTTPProxy.BypassDomain)
 }
 
 func (o *tunOptions) GetHTTPProxyMatchDomain() StringIterator {
-	return newIterator(o.TunPlatformOptions.HTTPProxy.MatchDomain)
+	return cb.NewIterator(o.TunPlatformOptions.HTTPProxy.MatchDomain)
 }

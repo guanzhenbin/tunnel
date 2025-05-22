@@ -15,6 +15,7 @@ import (
 	"github.com/sagernet/sing-box/common/process"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/experimental/rocketbox/platform"
 	"github.com/sagernet/sing-box/log"
@@ -79,7 +80,7 @@ func (o *simpleTunOptions) GetStrictRoute() bool {
 
 func NewService(configContent string, platformInterface PlatformInterface) (*BoxService, error) {
 	ctx := BaseContext(platformInterface)
-	ctx = filemanager.WithDefault(ctx, sWorkingPath, sTempPath, sUserID, sGroupID)
+	ctx = filemanager.WithDefault(ctx, cb.SWorkingPath, cb.STempPath, cb.SUserID, cb.SGroupID)
 	service.MustRegister[deprecated.Manager](ctx, new(deprecatedManager))
 	options, err := parseConfig(ctx, configContent)
 	if err != nil {
@@ -115,7 +116,7 @@ func NewService(configContent string, platformInterface PlatformInterface) (*Box
 }
 
 func (s *BoxService) Start() error {
-	if sFixAndroidStack {
+	if cb.SFixAndroidStack {
 		var err error
 		done := make(chan struct{})
 		go func() {
@@ -202,7 +203,7 @@ func (w *platformInterfaceWrapper) OpenTun(options *tun.Options, platformOptions
 	}
 	// For simplicity in this example, just use a dummy name
 	options.Name = "tun"
-	dupFd, err := dup(int(tunFd))
+	dupFd, err := cb.Dup(int(tunFd))
 	if err != nil {
 		return nil, E.Cause(err, "dup tun file descriptor")
 	}
@@ -257,7 +258,7 @@ func (w *platformInterfaceWrapper) Interfaces() ([]adapter.NetworkInterface, err
 		return nil, err
 	}
 	var interfaces []adapter.NetworkInterface
-	for _, netInterface := range iteratorToArray[*NetworkInterface](interfaceIterator) {
+	for _, netInterface := range cb.IteratorToArray[*NetworkInterface](interfaceIterator) {
 		if netInterface.Name == w.myTunName {
 			continue
 		}
@@ -269,11 +270,11 @@ func (w *platformInterfaceWrapper) Interfaces() ([]adapter.NetworkInterface, err
 				Index:     int(netInterface.Index),
 				MTU:       int(netInterface.MTU),
 				Name:      netInterface.Name,
-				Addresses: common.Map(iteratorToArray[string](netInterface.Addresses), netip.MustParsePrefix),
-				Flags:     linkFlags(uint32(netInterface.Flags)),
+				Addresses: common.Map(cb.IteratorToArray[string](netInterface.Addresses), netip.MustParsePrefix),
+				Flags:     cb.LinkFlags(uint32(netInterface.Flags)),
 			},
 			Type:        C.InterfaceType(netInterface.Type),
-			DNSServers:  iteratorToArray[string](netInterface.DNSServer),
+			DNSServers:  cb.IteratorToArray[string](netInterface.DNSServer),
 			Expensive:   netInterface.Metered || isDefault && w.isExpensive,
 			Constrained: isDefault && w.isConstrained,
 		})
@@ -302,7 +303,7 @@ func (w *platformInterfaceWrapper) ReadWIFIState() adapter.WIFIState {
 }
 
 func (w *platformInterfaceWrapper) SystemCertificates() []string {
-	return iteratorToArray[string](w.iif.SystemCertificates())
+	return cb.IteratorToArray[string](w.iif.SystemCertificates())
 }
 
 func (w *platformInterfaceWrapper) FindProcessInfo(ctx context.Context, network string, source netip.AddrPort, destination netip.AddrPort) (*process.Info, error) {

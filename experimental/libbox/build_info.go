@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 	"strings"
 
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing/common"
 )
 
@@ -30,7 +31,7 @@ type AndroidVPNType struct {
 }
 
 func ReadAndroidVPNType(publicSourceDirList StringIterator) (*AndroidVPNType, error) {
-	apkPathList := iteratorToArray[string](publicSourceDirList)
+	apkPathList := cb.IteratorToArray[string](publicSourceDirList)
 	var lastError error
 	for _, apkPath := range apkPathList {
 		androidVPNType, err := readAndroidVPNType(apkPath)

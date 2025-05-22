@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"golang.org/x/sys/unix"
 )
 
@@ -20,7 +21,7 @@ func RedirectStderr(path string) error {
 		return err
 	}
 	if runtime.GOOS != "android" {
-		err = outputFile.Chown(sUserID, sGroupID)
+		err = outputFile.Chown(cb.SUserID, cb.SGroupID)
 		if err != nil {
 			outputFile.Close()
 			os.Remove(outputFile.Name())

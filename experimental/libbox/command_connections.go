@@ -15,6 +15,7 @@ import (
 	"github.com/sagernet/sing/common/varbin"
 
 	"github.com/gofrs/uuid/v5"
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 )
 
 func (c *CommandClient) handleConnectionsConn(conn net.Conn) {
@@ -159,7 +160,7 @@ func (c *Connections) SortByTrafficTotal() {
 }
 
 func (c *Connections) Iterator() ConnectionIterator {
-	return newPtrIterator(c.filtered)
+	return cb.NewPtrIterator(c.filtered)
 }
 
 type Connection struct {
@@ -187,7 +188,7 @@ type Connection struct {
 }
 
 func (c *Connection) Chain() StringIterator {
-	return newIterator(c.ChainList)
+	return cb.NewIterator(c.ChainList)
 }
 
 func (c *Connection) DisplayDestination() string {

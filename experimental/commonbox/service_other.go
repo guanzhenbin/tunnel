@@ -1,9 +1,9 @@
 //go:build !windows
 
-package rocketbox
+package commonbox
 
 import "syscall"
 
-func dup(fd int) (nfd int, err error) {
+func Dup(fd int) (nfd int, err error) {
 	return syscall.Dup(fd)
 }
