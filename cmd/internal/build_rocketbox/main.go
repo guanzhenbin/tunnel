@@ -19,12 +19,16 @@ var (
 	debugEnabled bool
 	target       string
 	platform     string
+	libName      string
+	outputName   string
 )
 
 func init() {
 	flag.BoolVar(&debugEnabled, "debug", false, "enable debug")
 	flag.StringVar(&target, "target", "android", "target platform")
 	flag.StringVar(&platform, "platform", "", "specify platform")
+	flag.StringVar(&libName, "libname", "rocketbox", "library name")
+	flag.StringVar(&outputName, "output", "", "output xcframework name")
 }
 
 func main() {
@@ -99,7 +103,11 @@ func buildAndroid() {
 		"-target", bindTarget,
 		"-androidapi", "21",
 		"-javapkg=io.nekohasekai",
-		"-libname=rocketbox",
+		"-libname=" + libName,
+	}
+
+	if outputName != "" {
+		args = append(args, "-o", outputName)
 	}
 
 	if !debugEnabled {
@@ -124,7 +132,7 @@ func buildAndroid() {
 		log.Fatal(err)
 	}
 
-	const name = "librocketbox.aar"
+	name := "lib" + libName + ".aar"
 	copyPath := filepath.Join("..", "sing-box-for-android", "app", "libs")
 	if rw.IsDir(copyPath) {
 		copyPath, _ = filepath.Abs(copyPath)
@@ -150,8 +158,12 @@ func buildApple() {
 		"bind",
 		"-v",
 		"-target", bindTarget,
-		"-libname=rocketbox",
+		"-libname=" + libName,
 		"-tags-macos=" + strings.Join(memcTags, ","),
+	}
+
+	if outputName != "" {
+		args = append(args, "-o", outputName)
 	}
 
 	if !debugEnabled {
@@ -178,10 +190,14 @@ func buildApple() {
 
 	copyPath := filepath.Join("..", "sing-box-for-apple")
 	if rw.IsDir(copyPath) {
-		targetDir := filepath.Join(copyPath, "Rocketbox.xcframework")
+		framework := outputName
+		if framework == "" {
+			framework = strings.Title(libName) + ".xcframework"
+		}
+		targetDir := filepath.Join(copyPath, framework)
 		targetDir, _ = filepath.Abs(targetDir)
 		os.RemoveAll(targetDir)
-		os.Rename("Rocketbox.xcframework", targetDir)
+		os.Rename(framework, targetDir)
 		log.Info("copied to ", targetDir)
 	}
 }

@@ -8,6 +8,16 @@ The universal proxy platform.
 
 https://sing-box.sagernet.org
 
+### Building iOS framework
+
+Use the `build_rocketbox` utility to generate an xcframework for Apple platforms.
+For example, to create `RocketVPN.xcframework`:
+
+```shell
+go run ./cmd/internal/build_rocketbox -target apple \
+    -libname=rocketvpn -output RocketVPN.xcframework
+```
+
 ## License
 
 ```
