@@ -2,6 +2,7 @@ package libbox
 
 import (
 	C "github.com/sagernet/sing-box/constant"
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing-box/option"
 )
 
@@ -104,11 +105,11 @@ func (r *onDemandRule) Target() int32 {
 }
 
 func (r *onDemandRule) DNSSearchDomainMatch() StringIterator {
-	return newIterator(r.OnDemandRule.DNSSearchDomainMatch)
+	return cb.NewIterator(r.OnDemandRule.DNSSearchDomainMatch)
 }
 
 func (r *onDemandRule) DNSServerAddressMatch() StringIterator {
-	return newIterator(r.OnDemandRule.DNSServerAddressMatch)
+	return cb.NewIterator(r.OnDemandRule.DNSServerAddressMatch)
 }
 
 func (r *onDemandRule) InterfaceTypeMatch() int32 {
@@ -119,7 +120,7 @@ func (r *onDemandRule) InterfaceTypeMatch() int32 {
 }
 
 func (r *onDemandRule) SSIDMatch() StringIterator {
-	return newIterator(r.OnDemandRule.SSIDMatch)
+	return cb.NewIterator(r.OnDemandRule.SSIDMatch)
 }
 
 func (r *onDemandRule) ProbeURL() string {

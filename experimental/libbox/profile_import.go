@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"encoding/binary"
 
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/varbin"
 )
@@ -131,7 +132,7 @@ func (d *ProfileDecoder) Decode(data []byte) error {
 }
 
 func (d *ProfileDecoder) Iterator() ProfilePreviewIterator {
-	return newIterator(d.profiles)
+	return cb.NewIterator(d.profiles)
 }
 
 type ProfileContentRequest struct {

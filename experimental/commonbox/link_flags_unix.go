@@ -1,6 +1,6 @@
 //go:build unix
 
-package libbox
+package commonbox
 
 import (
 	"net"
@@ -8,7 +8,7 @@ import (
 )
 
 // copied from net.linkFlags
-func linkFlags(rawFlags uint32) net.Flags {
+func LinkFlags(rawFlags uint32) net.Flags {
 	var f net.Flags
 	if rawFlags&syscall.IFF_UP != 0 {
 		f |= net.FlagUp

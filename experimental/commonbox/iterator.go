@@ -1,4 +1,4 @@
-package libbox
+package commonbox
 
 import "github.com/sagernet/sing/common"
 
@@ -14,11 +14,11 @@ type iterator[T any] struct {
 	values []T
 }
 
-func newIterator[T any](values []T) *iterator[T] {
+func NewIterator[T any](values []T) *iterator[T] {
 	return &iterator[T]{values}
 }
 
-func newPtrIterator[T any](values []T) *iterator[*T] {
+func NewPtrIterator[T any](values []T) *iterator[*T] {
 	return &iterator[*T]{common.Map(values, func(value T) *T { return &value })}
 }
 
@@ -44,7 +44,7 @@ type abstractIterator[T any] interface {
 	HasNext() bool
 }
 
-func iteratorToArray[T any](iterator abstractIterator[T]) []T {
+func IteratorToArray[T any](iterator abstractIterator[T]) []T {
 	if iterator == nil {
 		return nil
 	}

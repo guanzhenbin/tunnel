@@ -3,10 +3,12 @@ package libbox
 import (
 	"os"
 	"path/filepath"
+
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 )
 
 func serviceErrorPath() string {
-	return filepath.Join(sWorkingPath, "network_extension_error")
+	return filepath.Join(cb.SWorkingPath, "network_extension_error")
 }
 
 func ClearServiceError() {
@@ -27,6 +29,6 @@ func WriteServiceError(message string) error {
 		return err
 	}
 	errorFile.WriteString(message)
-	errorFile.Chown(sUserID, sGroupID)
+	errorFile.Chown(cb.SUserID, cb.SGroupID)
 	return errorFile.Close()
 }

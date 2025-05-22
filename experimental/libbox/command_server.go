@@ -9,6 +9,7 @@ import (
 
 	"github.com/sagernet/sing-box/common/urltest"
 	"github.com/sagernet/sing-box/experimental/clashapi"
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/debug"
@@ -74,7 +75,7 @@ func (s *CommandServer) notifyURLTestUpdate() {
 }
 
 func (s *CommandServer) Start() error {
-	if !sTVOS {
+	if !cb.STVOS {
 		return s.listenUNIX()
 	} else {
 		return s.listenTCP()
@@ -82,7 +83,7 @@ func (s *CommandServer) Start() error {
 }
 
 func (s *CommandServer) listenUNIX() error {
-	sockPath := filepath.Join(sBasePath, "command.sock")
+	sockPath := filepath.Join(cb.SBasePath, "command.sock")
 	os.Remove(sockPath)
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{
 		Name: sockPath,
@@ -91,7 +92,7 @@ func (s *CommandServer) listenUNIX() error {
 	if err != nil {
 		return E.Cause(err, "listen ", sockPath)
 	}
-	err = os.Chown(sockPath, sUserID, sGroupID)
+	err = os.Chown(sockPath, cb.SUserID, cb.SGroupID)
 	if err != nil {
 		listener.Close()
 		os.Remove(sockPath)

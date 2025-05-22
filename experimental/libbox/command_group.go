@@ -9,6 +9,7 @@ import (
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/urltest"
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing-box/protocol/group"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/varbin"
@@ -78,7 +79,7 @@ type OutboundGroup struct {
 }
 
 func (g *OutboundGroup) GetItems() OutboundGroupItemIterator {
-	return newIterator(g.ItemList)
+	return cb.NewIterator(g.ItemList)
 }
 
 type OutboundGroupIterator interface {
@@ -103,7 +104,7 @@ func readGroups(reader io.Reader) (OutboundGroupIterator, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newIterator(groups), nil
+	return cb.NewIterator(groups), nil
 }
 
 func writeGroups(writer io.Writer, boxService *BoxService) error {

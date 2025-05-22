@@ -1,6 +1,7 @@
 package libbox
 
 import (
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing-tun"
 	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -55,7 +56,7 @@ func (m *platformDefaultInterfaceMonitor) UnregisterCallback(element *list.Eleme
 }
 
 func (m *platformDefaultInterfaceMonitor) UpdateDefaultInterface(interfaceName string, interfaceIndex32 int32, isExpensive bool, isConstrained bool) {
-	if sFixAndroidStack {
+	if cb.SFixAndroidStack {
 		done := make(chan struct{})
 		go func() {
 			m.updateDefaultInterface(interfaceName, interfaceIndex32, isExpensive, isConstrained)

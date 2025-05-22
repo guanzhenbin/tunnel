@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"net"
 
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
@@ -30,7 +31,7 @@ func (c *CommandClient) GetDeprecatedNotes() (DeprecatedNoteIterator, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newIterator(common.Map(features, func(it deprecated.Note) *DeprecatedNote { return (*DeprecatedNote)(&it) })), nil
+	return cb.NewIterator(common.Map(features, func(it deprecated.Note) *DeprecatedNote { return (*DeprecatedNote)(&it) })), nil
 }
 
 func (s *CommandServer) handleGetDeprecatedNotes(conn net.Conn) error {

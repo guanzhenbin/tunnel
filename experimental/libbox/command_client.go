@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 )
@@ -46,9 +47,9 @@ func NewCommandClient(handler CommandClientHandler, options *CommandClientOption
 }
 
 func (c *CommandClient) directConnect() (net.Conn, error) {
-	if !sTVOS {
+	if !cb.STVOS {
 		return net.DialUnix("unix", nil, &net.UnixAddr{
-			Name: filepath.Join(sBasePath, "command.sock"),
+			Name: filepath.Join(cb.SBasePath, "command.sock"),
 			Net:  "unix",
 		})
 	} else {
@@ -113,10 +114,10 @@ func (c *CommandClient) Connect() error {
 		if err != nil {
 			return err
 		}
-		if sFixAndroidStack {
+		if cb.SFixAndroidStack {
 			go func() {
 				c.handler.Connected()
-				c.handler.InitializeClashMode(newIterator(modeList), currentMode)
+				c.handler.InitializeClashMode(cb.NewIterator(modeList), currentMode)
 				if len(modeList) == 0 {
 					conn.Close()
 					c.handler.Disconnected(os.ErrInvalid.Error())
@@ -124,7 +125,7 @@ func (c *CommandClient) Connect() error {
 			}()
 		} else {
 			c.handler.Connected()
-			c.handler.InitializeClashMode(newIterator(modeList), currentMode)
+			c.handler.InitializeClashMode(cb.NewIterator(modeList), currentMode)
 			if len(modeList) == 0 {
 				conn.Close()
 				c.handler.Disconnected(os.ErrInvalid.Error())

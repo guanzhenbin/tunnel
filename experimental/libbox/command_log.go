@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	cb "github.com/sagernet/sing-box/experimental/commonbox"
 	"github.com/sagernet/sing/common/binary"
 	E "github.com/sagernet/sing/common/exceptions"
 	"github.com/sagernet/sing/common/varbin"
@@ -138,7 +139,7 @@ func (c *CommandClient) handleLogConn(conn net.Conn) {
 				c.handler.Disconnected(err.Error())
 				return
 			}
-			c.handler.WriteLogs(newIterator(messages))
+			c.handler.WriteLogs(cb.NewIterator(messages))
 		case 1:
 			c.handler.ClearLogs()
 		}
